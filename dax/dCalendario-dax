@@ -1,0 +1,115 @@
+dCalendario = 
+VAR DataInicial = DATE(2023, 1, 1)
+VAR DataFinal = DATE(2024, 12, 31)
+VAR dataAtual = TODAY()
+VAR MesAnoFiscal = 9
+VAR Datas = 
+    SELECTCOLUMNS (
+        CALENDAR ( DataInicial, DataFinal ),
+        "Data",
+        [Date]
+    )
+VAR _Calendario = 
+    ADDCOLUMNS (
+        Datas,
+        "Dia", DAY([Data]),
+        "Ano", YEAR ( [Data] ),
+        "MesNo", MONTH ( [Data] ),
+        "Mes", FORMAT( [Data] , "MMMM", "pt-BR" ),
+        "MesAbrev", FORMAT( [Data] , "MMM", "pt-BR" ),
+        "MesIniciais", UPPER(LEFT(FORMAT( [Data] , "MMMM", "pt-BR" ), 1)),
+        "MesAnoNo", MONTH([Data]) + YEAR([Data]) * 100,
+        "MesAno", FORMAT([Data], "MMM/YY"),
+        "AnoFiscal", IF( MONTH( [Data] ) >= MesAnoFiscal, YEAR ( [Data] ) + 1, YEAR ( [Data] ) ),
+        "AnoDecrescenteNo", YEAR ( [Data] ) * -1,
+        "AnoDecrescente", YEAR ( [Data] ),
+        "Quinzena", CONCATENATE(ROUNDUP(DAY([Data]) / (DAY(EOMONTH([Data], 0)) / 2), 0), "ªQ"),
+        "QuinzenaMesAno", CONCATENATE(ROUNDUP(DAY([Data]) / (DAY(EOMONTH([Data], 0)) / 2), 0), "ªQ") & " - " & FORMAT([Data], "MMM/YY"),
+        "DiaDaSemanaNo", WEEKDAY ( [Data], 2 ),
+        "DiaDaSemana", FORMAT ( [Data], "dddd", "pt-BR" ),
+        "InicioSemana", [Data] - WEEKDAY( [Data], 2 ) +1
+    )
+VAR _Offset = 
+    ADDCOLUMNS (
+        _Calendario,
+        "DataOffset", [Data] - dataAtual,
+        "DataAtual", 
+        VAR offset = [Data] - dataAtual
+        RETURN
+        SWITCH(
+            TRUE(),
+            offset = 0, "Data Atual",
+            offset = -1, "Data Anterior",
+            offset = 1, "Próxima Data",
+            FORMAT( [Data], "dd/MM/yyyy", "pt-BR" )
+        ),
+        "AnoOffset", YEAR ( [Data] ) - YEAR ( dataAtual ),
+        "AnoAtual", 
+        VAR offset = YEAR ( [Data] ) - YEAR ( dataAtual )
+        RETURN
+        SWITCH(
+            TRUE(),
+            offset = 0, "Ano Atual",
+            offset = -1, "Ano Anterior",
+            offset = 1, "Próxima Ano",
+            FORMAT( [Data], "yyyy", "pt-BR" )
+        ),
+        "MesOffset", ( YEAR ( [Data] ) * 12 -1 + MONTH ( [Data] ) ) - ( YEAR ( dataAtual ) * 12 -1 + MONTH ( dataAtual ) ),
+        "MesAtual",
+        VAR offset = ( YEAR ( [Data] ) * 12 -1 + MONTH ( [Data] ) ) - ( YEAR ( dataAtual ) * 12 -1 + MONTH ( dataAtual ) )
+        RETURN
+        SWITCH(
+            TRUE(),
+            offset = 0, "Mês Atual",
+            offset = -1, "Mês Anterior",
+            offset = 1, "Próxima Mês",
+            FORMAT( [Data], "mmmm", "pt-BR" )
+        )
+    )
+VAR _Semanal = 
+    ADDCOLUMNS (
+        _Offset,
+        "AnoSemanal", YEAR ( [InicioSemana] ),
+        "MesSemanalNo", MONTH ( [InicioSemana] ),
+        "MesSemanal", FORMAT ( [InicioSemana], "MMMM", "pt-BR" ),
+        "SemanaMes", 
+        VAR DataInicial = EOMONTH ( [InicioSemana], -1 ) + 1  //DATE ( [AnoSemanal], [MesSemanalNo], 1) 
+        VAR DataFinal = DataInicial + 6
+        VAR PrimeirasDatas = CALENDAR ( DataInicial, DataFinal )
+        VAR PrimeiraSegunda = 
+            INDEX (
+                1,
+                FILTER (
+                    PrimeirasDatas,
+                    WEEKDAY ( [Date], 2 ) = 1
+                )
+            )
+        RETURN 
+            DIVIDE ( [InicioSemana] - PrimeiraSegunda, 7 ) + 1
+    )
+VAR _EstacaoAno =
+    ADDCOLUMNS (
+        _Semanal,
+        "EstaçãoAnoNo",
+        VAR ref = MONTH([Data]) * 100 + DAY([Data])
+        RETURN
+        SWITCH(
+            TRUE(),
+            ref >= 321 && ref <= 620, "1",
+            ref >= 621 && ref <= 921, "2",
+            ref >= 922 && ref <= 1221, "3",
+            "4"
+        ),
+        "EstaçãoAno",
+        VAR ref = MONTH([Data]) * 100 + DAY([Data])
+        RETURN
+        SWITCH(
+            TRUE(),
+            ref >= 321 && ref <= 620, "Outono",
+            ref >= 621 && ref <= 921, "Inverno",
+            ref >= 922 && ref <= 1221, "Primavera",
+            "Verão"
+        )
+    )
+RETURN 
+_EstacaoAno
