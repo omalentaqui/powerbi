@@ -1,0 +1,134 @@
+( Criando comparação em visual com eixo e colunas - (Acumulado) Faturamento vs Meta ao longo do tempo )
+
+-- Eixo personalidado, classificar pela coluna Id e relacionar com o Mes da dCalendario
+    tEixo = 
+    var __Meses = 
+        ALL( dCalendario[Mes Abreviado], dCalendario[Mes] )
+    var __Complemento = 
+        DATATABLE(
+            "X", STRING,
+            "Id", INTEGER,
+            {
+                { "Meta", 13 },
+                { "",     14 },
+                { "Meta", 15 },
+            }
+    )
+    return
+        UNION(
+            __Complemento,
+            __Meses
+    )
+
+-- Coluna Calendario Verifica se há vendas na data
+    Datas com Venda =
+    dCalendario[Data] <= MAX( fVendas[Data Pedido] )
+
+-- Formato Dinâmico
+    var __Valor = 
+        SELECTEDMEASURE( )
+    return
+    """" &
+        SWITCH(
+            TRUE( ),
+            ABS( __Valor ) >= 1E9, FORMAT( __Valor, "#,,,.00 B;-#,,,.0 B;-" ),
+            ABS( __Valor ) >= 1E6, FORMAT( __Valor, "#,,.00 M;-#,,.0 M;-" ),
+            ABS( __Valor ) >= 1E3, FORMAT( __Valor, "#,.00 K;-#,.0 K;-" ),
+            FORMAT( __Valor, "#;-#;-" )
+        )
+    & """"
+-------------------------------------
+    var __Valor = //Rotulo
+        [000. Diferença]
+    return
+    """" &
+        SWITCH(
+            TRUE( ),
+            ABS( __Valor ) >= 1E9, FORMAT( __Valor, "#,,,.00 Bi;-#,,,.0 Bi;-" ),
+            ABS( __Valor ) >= 1E6, FORMAT( __Valor, "#,,.00 Mi;-#,,.0 Mi;-" ),
+            ABS( __Valor ) >= 1E3, FORMAT( __Valor, "#,.00 K;-#,.0 K;-" ),
+            FORMAT( __Valor, "+#;-#;-" )
+        )
+    & """"
+---------------------------------------
+  "+0,00% ↑;-0,00% ↓;-" ( Fonte Calibri )
+  
+-- Medidas
+    000. Diferença = 
+    CALCULATE(
+        [$ Faturamento] - [$ Meta],
+        REMOVEFILTERS( tEixo )
+    )
+      
+    000. Diferença % = 
+    CALCULATE(
+        DIVIDE( [$ Faturamento], [$ Meta], 0 ) - 1,
+        REMOVEFILTERS( tEixo )
+    )
+    
+    001. Faturamento YTD = 
+    CALCULATE(
+        TOTALYDT( [$ Faturamento], dCalendario[Data] ),
+        dCalendario[Datas com Venda] = TRUE( )
+    )
+
+    002. Meta YTD
+    CALCULATE(
+        TOTALYDT( [$ Meta], dCalendario[Data] ),
+        dCalendario[Datas com Venda] = TRUE( )
+    )
+
+    003. Colunas
+    var __Contexto = SELECTEDVALUE( tEixo[Id] )
+    var __Faturamento = CALCULATE( [001. Faturamento YTD], REMOVEFILTERS( tEixo ) )
+    var __Meta = CALCULATE( [002. Meta YTD], REMOVEFILTERS( tEixo ) )
+    var __Resultado =
+        SWITCH(
+            __Contexto,
+            13, __Faturamento,
+            15, __Meta
+        )
+    return
+        __Resultado
+
+    004. Linha Horizontal =
+    var __Contexto = SELECTEDVALUE( tEixo[Id] )
+    var __Faturamento = CALCULATE( [001. Faturamento YTD], REMOVEFILTERS( tEixo ) )
+    var __Meta = CALCULATE( [002. Meta YTD], REMOVEFILTERS( tEixo ) )
+    var __ValorMaior = MAX( __Faturamento, __Meta )
+    var __Deslocamento = 1.1 * __ValorMaior
+    var __Resultado =
+        IF(
+            __Contexto > 12,
+            __Deslocamento
+        )
+    return
+        __Resultado
+
+    005. Linha Horizontal =
+      var __Contexto = SELECTEDVALUE( tEixo[Id] )
+      var __Resultado =
+          IF(
+              __Contexto IN { 13, 15 },
+              [004. Linha Horizontal]
+          )
+      return
+          __Resultado
+    
+    006. Rotulo =
+          var __Contexto = SELECTEDVALUE( tEixo[Id] )
+          var __Resultado =
+              IF(
+                  __Contexto = 14,
+                  [004. Linha Horizontal]
+              )
+          return
+              __Resultado
+  
+    007. Y Max =
+      var __Faturamento = CALCULATE( [001. Faturamento YTD], REMOVEFILTERS( tEixo ) )
+      var __Meta = CALCULATE( [002. Meta YTD], REMOVEFILTERS( tEixo ) )
+      var __ValorMaior = MAX( __Faturamento, __Meta )
+      var __Resultado = 1.4 * __ValorMaior
+      return
+          __Resultado
