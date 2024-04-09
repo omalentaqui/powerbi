@@ -1,0 +1,97 @@
+-- Cálculos para realizar análise de forecasting
+
+( No visual de linhas, no campo de formato - linha referência, adicionar a medida na formatação condicional de valor )
+Última Venda =
+CALCULATE(
+    MAX( fVendas[Data] ), //Puxa a última data de pedido de vendas
+    ALL( ) //Remove todos os filtros 
+)
+
+( Considerando o acumulado por mês até quando não tem valor )
+$ Faturamento MTD =
+CALCULATE(
+    [$ Faturamento],
+    DATEMTD( dCalendario[Data] )
+)
+
+( Calcula o valor acumulado até a última venda )
+$ Faturamento MTD =
+CALCULATE(
+    [$ Faturamento],
+    CALCULATETABLE( //Força ele criar o filtro nesta tabela abaixo para não trazer as datas futuras
+        DATEMTD( dCalendario[Data] ),
+        dCalendario[Passado] = TRUE( )
+    )
+)
+
+( Calcula os valores de meta e acrescenta com o faturamento realizado )
+$ Forecast = 
+var _RF = //Romain Forecast
+CALCULATE(
+    [$ Meta],
+    dCalendario[Passado] = FALSE( )
+)
+return
+_RF + [$ Faturamento]
+
+( Acumulado Mensal )
+$ Forecast MTD =
+CALCULATE(
+    [$ Forecast],
+    DATEMTD( dCalendario[Data] )
+)
+
+( Acumulando dia a dia e depois acumula no mês )
+$ Forecast Média =
+var _Media = AVEREGEX( ALLSELECTED( dCalendario ), [$ Faturamento] ) //Média de faturamento por dia realizado
+var _DataAtual = SELECTEDVALUE( dCalendario[Data] ) //contexto
+var _DataMax = [Última Venda]
+var _DiaSemana = SELECTEDVALUE( dCalendario[DiaSemana] ) -- Considerando se há vendas apenas em dias úteis
+return
+IF(
+    _DataAtual > _DataMax && NOT( _DiaSemana IN { 0, 6 } ), // Não considera os finais de semana
+    _Media,         //futuro
+    [$ Faturamento] //passado
+)
+
+( Acumulado Mensal )
+$ Forecast MTD Média =
+SUMX(
+    DATEMTD( dCalendario[Data] )
+    [$ Forecast Média],
+)
+
+( Seleção de Parâmetro de Campo usando medidas )
+$ Forecast Selecionado = 
+SWITCH(
+    SELECTEDVALUE( 'Parâmetro'[Parâmetro Pedido] ),
+    0, [$ Forecast],
+    1, [$ Forecast Média],
+    2, [$ Forecast LY]
+)
+
+( Alterando a medida de Acumulado MTD para encaixar no contexto )
+$ Forecast MTD Selecionado = 
+SUMX(
+    DATEMTD( dCalendario[Data] ),
+    [$ Forecast Selecionado]
+)
+
+( Acumulando dia a dia e depois acumula no mês com base no último ano)
+$ Forecast LY =
+var _LY = CALCULATE( [$ Forecast], SAMEPERIODLASTYEAR( dCalendario[Data] ) )
+var _DataAtual = SELECTEDVALUE( dCalendario[Data] ) //contexto
+var _DataMax = [Última Venda]
+return
+IF(
+    _DataAtual > _DataMax,
+    _LY,            //futuro
+    [$ Faturamento] //passado
+)
+
+( Configuração do parâmetro )
+auxForecast = {
+    ( "Meta Restante", NAMEOF( 'Medidas'[$ Forecast] ), 0 ),
+    ( "Média do Mês", NAMEOF( 'Medidas'[$ Forecast Média] ), 1 )
+    ( "Ano Passado", NAMEOF( 'Medidas'[$ Forecast LY] ), 2 )
+}
