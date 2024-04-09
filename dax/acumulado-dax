@@ -1,0 +1,15 @@
+Acumulado = 
+var __DataContexto = MAX( dCalendario[Data] )
+var __TabelaFonte = 
+    CALCULATETABLE(
+      ffato,
+      ALL( dCalendario ),
+      ffato[STATUS DATA EMBARQUE] = "Previsão embarque",
+      ffato[Data de Embarque] <= __DataContexto,
+      ffato[Vencimento] > __DataContexto
+)
+return
+    CALCULATE(
+        SUM( ffato[Valor Total Pedido com FF] ),
+        __TabelaFonte
+)
