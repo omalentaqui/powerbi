@@ -1,0 +1,89 @@
+-- No PowerQuery, classificar datahora de forma ascendente (menor-maior)
+-- Em adicionar coluna, inserir coluna indice, comecando de 1
+
+-- Para obter o inicio da atividade
+Inicio = 
+    MIN( Tabela[Sua medida] )
+
+-- Para obter o fim da atividade
+Fim = 
+var _Contexto = 
+    SELECTEDVALUE = ( Tabela[Seu Contexto] )
+  
+var _Indice =
+    SELECTEDVALUE = ( Tabela[Indice] )
+
+var _ProximoContexto =
+    MINX(
+      FILTER(
+          ALLSELECTED( Tabela ),
+          Tabela[Seu Contexto] = _Contexto
+              && Tabela[Indice] > _Indice
+      ),
+      [DataHora]
+)
+
+var _UltimoContexto = MAX( Tabela[DataHora] )
+
+var _Resultado = 
+    IF(
+      ISINSCOPE( Tabela[Status] ), // O que deve ser considerado no contexto
+      _ProximoContexto,
+      _UltimoContexto
+)
+
+return _Resultado
+
+-- Para obter a duracao total de contexto
+Duracao Total =
+var _Linha = 
+    DATEDIFF(
+        [Inicio],
+        [Fim],
+        HOUR
+    )
+
+var _Total = 
+    SUMX(
+        Tabela,
+        CALCULATE(
+              DATEDIFF(
+                  [Inicio],
+                  [Fim],
+                  HOUR
+              )
+          )
+      )
+
+var _Resultado = 
+    DIVIDE(
+        IF(
+          ISINSCOPE( Tabela[Indice] ),
+          _Linha,
+          _Total
+        ),
+        60
+    )
+
+return _Resultado
+
+-- Para obter a formatacao em datatime, seguir com o formato dinâmico da medida
+
+var _Valor = SELECTEDMEASURE( )
+var _Hora = FORMAT( INT( DIVIDE( _Valor, 3600 ) ), "00" )
+var _Minuto = FORMAT( INT( DIVIDE( MOD( _Valor, 3600 ), 60 ) ), "00" )
+var _Segundo = FORMAT( MOD( MOD( _Valor, 3600 ) 60 ), "00" )
+var _Resultado = 
+    _Hora & ":" & _Minuto & ":" & _Segundos
+return
+    """" & _Resultado & """"
+
+
+
+
+
+
+
+
+
+
