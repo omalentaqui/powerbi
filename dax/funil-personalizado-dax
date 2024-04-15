@@ -1,0 +1,61 @@
+-- Criando visual personalizado e nativo (Gráfico de barras empilhadas)
+-- Habilitar faixa de opcoes
+-- Contexto
+Contexto = SUM( Tabela[Sua Medida] )
+
+-- Deslocar o eixo
+Desloc Eixo =
+var _Contexto = [Medida]
+var _tabela = ALL( Tabela )
+var _MaiorValor = MAXX( _tabela, [Medida] )
+var _Resultado = _MaiorValor - _Contexto * 0.5
+return _Resultado
+
+-- Para obter o percentual de primeiro contexto
+% Contexto = 
+var _Contexto = [Medida]
+var _tabela = ALL( Tabela )
+var _MaiorValor = MAXX( _tabela, [Medida] )
+var _Texto = 
+    SWITCH(
+        SELECTEDVALUE( Tabela[Coluna ID Contexto] ),
+        1, "Total ",
+        5, "Taxa Conversão: ",
+        "% de Prospecção: "
+    )
+var _Resultado = DIVIDE( _Contexto, _MaiorValor )
+return 
+    _Texto & FORMAT( _Resultado, "0.00%" )
+
+-- Para obter o percentual de contexto anterior
+% Contexto Anterior = 
+var _Contexto = [Medida]
+
+var _Desloc =
+    CALCULATE(
+        [Medida],
+        OFFSET(
+            -1,
+            ALL( Tabela[Coluna], Tabela[Coluna ID] ),
+            ORDERBY( Tabela[Coluna ID Contexto], ASC )
+        )
+    )
+var _Percentual = 
+    DIVIDE( _Contexto, _Desloc )
+    
+var _Texto = "% do Anterior"
+
+var _Resultado = 
+    IF(
+        NOT SELECTEDVALUE( Tabela[Coluna ID] ) = 1,
+        _Texto & FORMAT( _Percentual, "0.00%" )
+    )
+
+return _Resultado
+
+
+
+
+
+
+
