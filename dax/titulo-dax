@@ -1,0 +1,10 @@
+Titulo Cabeçalho = 
+var _Safras = 
+CONCATENATEX(
+    VALUES(Corredor_Safra[Crop]),
+    Corredor_Safra[Crop],
+    ", "
+)
+var _Filtro = ISFILTERED(Corredor_Safra[Crop])
+return
+IF(_Filtro, _Safras &" Execution Report", "Execution Report")
