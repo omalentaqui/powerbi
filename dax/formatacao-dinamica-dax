@@ -1,0 +1,15 @@
+var _Medida = [$ Faturamento]
+var _MedidaFormat = 
+SWITCH(
+    TRUE( ),
+    _Medida > 1E6, FORMAT( _Medida, "#0,,.0 Mi" ),
+    _Medida > 1E3, FORMAT( _Medida, "#0,,.0 K" ),
+    FORMAT( _Medida, "#0" )
+)
+var _MetaFormat = FORMAT( [% Sua Medida], "⇧ 0.0%; ⇩ 0.0%" )
+return
+"""" &
+_MedidaFormat &
+" | " &
+_MedidaFormat &
+""""
