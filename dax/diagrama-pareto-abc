@@ -1,0 +1,202 @@
+-- Criando gráfico de pareto + análise ABC, utilizando gráfico de colunas e linhas
+
+-- Faturamento Acumulado
+Fat Acumulado = 
+var _FaturamentoAtual = [Faturamento]
+var _Tabela =
+SUMMARIZE(
+      ALLSELECTED( fVendas ),
+      dProdutos[Produto],
+      "@Faturamento", [Faturamento]
+)
+var _Acumulado = 
+IF( 
+    [Faturamento] > 0,
+    SUMX(
+        FILTER( _Tabela, [@Faturamento] >= _FaturamentoAtual ),
+        [Faturamento]
+    )
+)
+return
+_Acumulado
+
+-- Faturamento Acumulado %
+% Fat Acumulado = 
+var _FaturamentoAtual = [Faturamento]
+var _FaturamentoTotal = 
+CALCULATE(
+      [Faturamento],
+      ALLSELECTED( dProdutos[Produto] )
+)
+var _Tabela =
+SUMMARIZE(
+      ALLSELECTED( fVendas ),
+      dProdutos[Produto],
+      "@Faturamento", [Faturamento]
+)
+var _Acumulado = 
+IF( 
+    [Faturamento] > 0,
+    SUMX(
+        FILTER( _Tabela, [@Faturamento] >= _FaturamentoAtual ),
+        [Faturamento]
+    )
+)
+return
+DIVIDE( _Acumulado, _FaturamentoTotal )
+
+-- Quantidade de produtos acima de 80%
+Qtd Produtos Acima 80% =
+COUNTROWS(
+      FILTER(
+          VALUES( dProdutos[Produto] ),
+          [Faturamento Acumulado %] <= 0.8
+      )
+)      
+
+-- Faturamento Produtos 80%
+Faturamento Produtos 80% = 
+SUMX(
+      FILTER(
+          VALUES( dProdutos[Produto] ),
+          [Faturamento Acumulado %] <= 0.8
+      ),
+      [Faturamento]
+)
+
+  
+-- Subtitulo para o gráfico
+Subtitulo Pareto 01 =
+[Qtd Produtos Acima 80%] & " Produtos representam 80% do Faturamento no Total de " & FORMAT( [Faturamento Produtos 80%], "R$#,#00.00" )
+
+  
+-- Análise de Curva ABC
+
+-- Obter rank de produtos
+Rank = 
+IF(
+    ISINSCOPE( dProdutos[Produto] ),
+    RANKX(
+        ALL( dProdutos[Produto] ),
+        [Faturamento]
+    )
+
+-- Obter a classificação ABC dos produtos/Contexto
+Classificação ABC = 
+IF(
+    ISINSCOPE( dProdutos[Produto] ),
+    SWITCH(
+          TRUE( ),
+          [Faturamento Acumulado %] <= 0.8, "A",
+          [Faturamento Acumulado %] <= 0.9, "B",
+          "C"
+    )
+)
+
+-- Medidas para puxar a quantidade de produtos de cada classificação
+
+Qtd Produto A =
+COUNTROWNS(
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "A"
+      )
+)
+
+Qtd Produto B =
+COUNTROWNS(
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "B"
+      )
+)
+
+Qtd Produto C =
+COUNTROWNS(
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "C"
+      )
+)
+
+-- Medidas para puxar o faturamento de produtos de cada classificação
+
+Faturamento Produto A = 
+CALCULATE(
+      [Faturamento], 
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "A"
+      )
+)
+
+Faturamento Produto B = 
+CALCULATE(
+      [Faturamento], 
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "B"
+      )
+)
+
+Faturamento Produto C = 
+CALCULATE(
+      [Faturamento], 
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "C"
+      )
+)
+
+-- Medidas para puxar o percentual de faturamento de produtos de cada classificação
+
+% Produto A = 
+DIVIDE( [Faturamento Produto A], [Faturamento] )
+
+% Produto B = 
+DIVIDE( [Faturamento Produto B], [Faturamento] )
+
+% Produto C = 
+DIVIDE( [Faturamento Produto C], [Faturamento] )
+
+-- Medidas para puxar o percentual de faturamento de produtos de cada classificação
+
+Ticket Médio = 
+DIVIDE( [Faturamento], [Unidades Vendidas] )
+
+Ticket Médio Grupo A = 
+CALCULATE(
+      [Ticket Médio]
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "A"
+      )
+)
+
+Ticket Médio Grupo B = 
+CALCULATE(
+      [Ticket Médio]
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "B"
+      )
+)
+
+Ticket Médio Grupo C = 
+CALCULATE(
+      [Ticket Médio]
+      FILTER(
+          VALUES( dProduto[Produto] ),
+          [Classificação ABC] = "C"
+      )
+)
+      
+-- Subtitulo para o gráfico
+Subtitulo Pareto 02 =
+[Qtd Produtos Acima 80%] & " Produtos representam 80% do Faturamento no Total de " & FORMAT( [Faturamento Produtos 80%], "R$#,#00.00" )
+& UNICHAR( 10 ) & //Realiza a quebra de linhas
+"Qtde A: " & [Qtd Produto A] & " - Qtde B: " & [Qtd Produto B] & " - Qtde C: " & [Qtd Produto C]
+
+-- Formatação de texto dinâmico para Caixa de Texto
+
+Os ([Qtd Produtos A]) produtos do Grupo A tem um Faturamento Total de ([Faturamento Produto A]) representando ([% Produto A]) do total com um Ticket Médio de ([Ticket Médio A])
