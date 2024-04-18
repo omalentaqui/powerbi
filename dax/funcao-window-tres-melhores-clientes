@@ -1,0 +1,71 @@
+-- Calculo dos três melhores clientes dos últimos três meses
+--Formatação das medidas #,0
+-- Calculando o faturamento
+Faturamento =
+SUM( fVendas[Valor] )
+
+-- Descobrindo os 3 melhores clientes
+3 Melhores Clientes = 
+var _tresMaioresClientes = //Criação de tabela com os 3 melhores clientes
+    WINDOW(
+        1, ABS,
+        3, ABS,
+        ALLSELECTED( dClientes[Cliente] ),
+        ORDERBY( [Valor, DESC )
+    )
+var _Resultado = 
+    CALCULATE(
+        [Valor],
+        KEEPFILTERS( _tresMaioresClientes )
+    )
+return
+_Resultado
+
+-- Descobrindo os valores dos últimos 3 meses
+Valor Últimos 3 Meses = 
+var _ultimoTresMeses = 
+    WINDOW(
+        -2, REL,
+        0, REL,
+        ALLSELECTED( 
+            dCalendario[MesAno],
+            dCalendario[MesAnoNo]
+        ),
+        ORDERBY( dCalendario[MesAnoNo], ASC )
+    )
+
+var _Resultado = 
+    CALCULATE(
+        [Valor],
+        _ultimoTresMeses
+    )
+return
+_Resultado
+
+-- Descobrindo os valores dos 3 melhores clientes nos últimos 3 meses
+Valor 3 Melhores Clientes Últimos 3 Meses = 
+var _ultimoTresMeses = 
+    WINDOW(
+        -2, REL,
+        0, REL,
+        ALLSELECTED( 
+            dCalendario[MesAno],
+            dCalendario[MesAnoNo]
+        ),
+        ORDERBY( dCalendario[MesAnoNo], ASC )
+    )
+
+var _tabelaSumarizada =
+    ADDCOLUMNS(
+        _ultimoTresMeses,
+        "@ValorTresMaioresClientes",
+        [Valor 3 Maiores Clientes]
+    )
+
+var _Resultado = 
+    SUMX(
+        _tabelaSumarizada
+        [@ValorTresMaioresClientes]
+    )
+return
+_Resultado
