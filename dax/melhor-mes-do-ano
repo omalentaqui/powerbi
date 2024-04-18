@@ -1,0 +1,78 @@
+-- Identicar o melhor mes, respeitando filtros externos de mes e ano
+
+Melhor mês = //Calcula apenas o melhor mes do contexto considerado
+CALCULATE(
+    INDEX(
+        1,
+        ALLSELECTED( dCalendario[MesAno] ),
+        ORDERBY( [Valor Total] , DESC )
+    ),
+    ALLEXCEPT( dCalendario, dCalendario[Ano] )
+)
+
+Melhores 3 Meses = 
+var _tabelaFonte = 
+WINDOW(
+    1, ABS,
+    3, ABS,
+    CALCULATETABLE(
+        ADDCOLUMNS(
+            VALUES( dCalendario[MesAno] ),
+            "@Valor", [Valor Total]
+        ),
+        ALLEXCEPT( dCalendario, dCalendario[Ano] )
+    ),
+    ORDERBY( [@Valor], DESC )   
+)
+
+return
+    CONCATENATEX(
+        _tabelaFonte,
+        [MesAno],
+        ", ",
+        [@Valor],
+        DESC
+    )
+
+-- Colorir as barras do grafico seguido pelo pior mes e melhor mes
+
+FC = 
+var _tabelaFonte = 
+FILTER(
+    CALCULATETABLE(
+        ADDCOLUMNS(
+            VALUES( dCalendario[MesAno] ),
+            "@Valor", [Valor Total]
+        ),
+        ALLEXCEPT( dCalendario, dCalendario[Ano] )
+    ),
+    NOT ISBLANK( [@Valor] )
+)
+
+var _MelhorMes = 
+MINX(
+  INDEX(
+        1,
+        _tabelaFonte,
+        ORDERBY( [@Valor] , DESC )
+  ),
+  [MesAno]
+)
+
+var _PiorMes = 
+MINX(
+  INDEX(
+        1,
+        _tabelaFonte,
+        ORDERBY( [@Valor] , ASC )
+  ),
+  [MesAno]
+)
+
+return
+    SWITCH(
+        SELECTEDVALUE( dCalendario[MesAno] ),
+        _MelhorMes, [Cor bom], //"Green"
+        _PiorMes, [Cor ruim], //"Red"
+        [Cor padrão] //"Blue"
+    )
