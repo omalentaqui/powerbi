@@ -1,0 +1,113 @@
+-- Medidas básicas
+
+Faturamento = 
+    SUMX(
+        fVendas,
+        fVendas[QtdVendida] * RELATED( dProdutos[PrecoUnitario] )
+    )
+
+Custo = 
+    SUMX(
+        fVendas,
+        fVendas[QtdVendida] * RELATED( dProdutos[CustoUnitario] )
+    )
+
+Margem Bruta = [Faturamento] - [Custo]
+
+% Margem Bruta = DIVIDE( [Custo], [Faturamento] )
+
+Ticket Médio = 
+    AVEREGEX(
+        VALUES( fVendas[VendaID] ),
+        [Faturamento]
+    )
+
+-- Em parâmetro de campos, selecionar as medidas: (cria um segmentador de dados)
+
+    Faturamento,
+    Margem Bruta,
+    % Margem Bruta,
+    Ticket Médio
+
+-- Criando o ranking com as medidas ( em filtro lateral, adicionar a medida Ranking como "é menor que ou igual a" 5 )
+
+Ranking = 
+var _Faturamento = 
+    RANK(
+        DENSE,
+        ALLSELECTED( dCliente[Cliente] ),
+        ORDERBY( 
+            [Faturamento], DESC, //Ordena de forma descendente
+            CALCULATE( //Criando o desempate, caso haja, pelo critério de quem realizou o primeiro pedido
+                  MIN( fVendas[VendasID] ),
+                  ALL( fVendas[VendasID] ) 
+            ), ASC 
+        )
+    )
+
+var _MargemBruta= 
+    RANK(
+        DENSE,
+        ALLSELECTED( dCliente[Cliente] ),
+        ORDERBY( 
+            [Margem Bruta], DESC,
+            CALCULATE(
+                  MIN( fVendas[VendasID] ),
+                  ALL( fVendas[VendasID] ) 
+            ), ASC
+        )
+    )
+
+var _PercMargemBruta = 
+    RANK(
+        DENSE,
+        ALLSELECTED( dCliente[Cliente] ),
+        ORDERBY( 
+            [% Magem Bruta], DESC,
+            CALCULATE(
+                  MIN( fVendas[VendasID] ),
+                  ALL( fVendas[VendasID] ) 
+            ), ASC
+        )
+    )
+
+var _TicketMedio = 
+    RANK(
+        DENSE,
+        ALLSELECTED( dCliente[Cliente] ),
+        ORDERBY( 
+            [Ticket Médio], DESC,
+            CALCULATE(
+                  MIN( fVendas[VendasID] ),
+                  ALL( fVendas[VendasID] ) 
+            ), ASC
+        )
+    )
+
+return
+    SWITCH(
+        SELECTEDVALUE( 'Parâmetro'[Parâmetro Pedido] ),
+        0, _Faturamento,
+        1, _MargemBruta,
+        2, _PercMargemBruta,
+        3, _TicketMedio,
+    )
+
+
+-- Parametros de Intervalo Númerico (What if) para atribuir os valores de seleção estipulados pelo usuário
+
+Nome: Top x
+Tipo de Dados: Número Inteiro
+Minímo: 0 / Máximo: 10
+Incrementar: 1 / Padrão: 5
+
+-- Medida para utilizar como filtro lateral do visual
+
+Filtro Lateral = 
+    IF(
+        [Ranking] <= [Valor Top],
+        1,
+        -1
+    )
+
+em filtro lateral, filtrar por "é" 1
