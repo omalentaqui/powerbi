@@ -1,0 +1,7 @@
+(textToConvert) =>
+let 
+    textBinary = Text.ToBinary(textToConvert, 1251),
+    textASCII  = Text.FromBinary(textBinary, TextEncoding.Ascii),
+    textUnderscored = Text.Replace(textASCII, "?", " ")
+in    
+    textUnderscored
