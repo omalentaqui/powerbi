@@ -1,0 +1,31 @@
+-- Para mostrar os últimos 12 meses isolando os filtros externos, segue passos e medidas
+
+-- Realizar a medida de forma anualizada, considerando o período de atulização do modelo
+
+Faturamento Anualizado = 
+var _TemFiltro = HASONFILTER( dCalendario[MesAbrv] ) || HASONFILTER( dCalendario[Ano] )
+var _DataAtual = SELECTEDVALUE( DataAttDataset[DataAttDataset] )
+    //DataServer = TODAY( )
+    //DataMaxFato = SELECTEDVALUE( DataMaxFato[DataMaxFato] )
+      -- PQ = List.Max( fVendas[Data] )
+    //DataAttDataset = SELECTEDVALUE( DataAttDataset[DataAttDataset] )
+      -- PQ = DateTimeZone.SwitchZone( DateTimeZone.LocalNow( ), -3 )
+var _QtdMeses = -12
+var _DataInicial = EOMONTH( _DataAtual, _QtdMeses ) + 1
+var _Anualizado = 
+    CALCULATE(
+        [Faturamento],
+        DATESBETWEEN( dCalendario[Data], _DataInicial, _DataAtual ),
+        dCalendario
+    )
+var _Padrao = [Faturamento]
+return
+    IF(
+        _TemFiltro,
+        _Padrao,
+        _Anualizado
+    )
+
+-- Utilizar ferramenta externa 'Tabular Editor', calculation group
+
+video de referencia = www.youtube.com/watch?v=udDRO1nrlXc#t=15m20s
