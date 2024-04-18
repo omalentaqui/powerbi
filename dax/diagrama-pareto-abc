@@ -200,3 +200,12 @@ Subtitulo Pareto 02 =
 -- Formatação de texto dinâmico para Caixa de Texto
 
 Os ([Qtd Produtos A]) produtos do Grupo A tem um Faturamento Total de ([Faturamento Produto A]) representando ([% Produto A]) do total com um Ticket Médio de ([Ticket Médio A])
+
+-- Cor pareto através de medida
+Cor Pareto = 
+SWITCH(
+      TRUE( ),
+      [Faturamento Acumulado %] <= 0.8, "#6B32D9",
+      [Faturamento Acumulado %] <= 0.9, "9977C9",
+      "E8E8E8"
+)
